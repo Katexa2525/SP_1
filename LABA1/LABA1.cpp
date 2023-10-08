@@ -182,6 +182,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     break;
   }
+  case WM_GETMINMAXINFO:
+  {
+    MINMAXINFO* lpMMI = (MINMAXINFO*)lParam;
+    lpMMI->ptMinTrackSize.x = spriteSize.cx;  // Минимальная ширина окна
+    lpMMI->ptMinTrackSize.y = spriteSize.cy; // Минимальная высота окна
+    return 0;
+  }
   case WM_CREATE:
     LoadBitmapFromFile();
     nTimerID = SetTimer(hWnd, 1, 10, NULL);
@@ -240,7 +247,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     // Ограничьте скорость мячика, если она слишком большая
-    const double maxSpeed = 4.0;
+    const double maxSpeed = 3.0;
     if (xVelocity > maxSpeed) xVelocity = maxSpeed;
     if (xVelocity < -maxSpeed) xVelocity = -maxSpeed;
     if (yVelocity > maxSpeed) yVelocity = maxSpeed;
@@ -261,29 +268,38 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
   // В функции WM_TIMER, измените позицию мячика на основе скорости
   case WM_TIMER:
-  {
-    // Обновите позицию мячика на основе скорости
-    xPos +=(int)xVelocity;
-    yPos +=(int)yVelocity;
+  {// Обновите позицию мячика на основе скорости
+    xPos += (int)xVelocity;
+    yPos += (int)yVelocity;
 
     // Получите размеры клиентской области окна
     GetClientRect(hWnd, &clientRect);
 
-    // Проверьте столкновение мячика с границами окна
-    if (xPos < 0 || xPos + spriteSize.cx > clientRect.right)
+    // Проверьте столкновение мячика с границами окна и скорректируйте позицию при необходимости
+    if (xPos < 0)
     {
-      // Мячик столкнулся с левой или правой границей, измените направление скорости по X
+      xPos = 0;
       xVelocity = -xVelocity * acceleration;
     }
-
-    if (yPos < 0 || yPos + spriteSize.cy > clientRect.bottom)
+    if (xPos + spriteSize.cx > clientRect.right)
     {
-      // Мячик столкнулся с верхней или нижней границей, измените направление скорости по Y
+      xPos = clientRect.right - spriteSize.cx;
+      xVelocity = -xVelocity * acceleration;
+    }
+    if (yPos < 0)
+    {
+      yPos = 0;
+      yVelocity = -yVelocity * acceleration;
+    }
+    if (yPos + spriteSize.cy > clientRect.bottom)
+    {
+      yPos = clientRect.bottom - spriteSize.cy;
       yVelocity = -yVelocity * acceleration;
     }
 
     // Запросите перерисовку окна
     InvalidateRect(hWnd, NULL, TRUE);
+
   }
   break;
   case WM_KEYDOWN:
