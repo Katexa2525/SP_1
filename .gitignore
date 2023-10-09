@@ -30,6 +30,8 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+x64/[Dd]ebug/
+x86/[Rr]elease/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -49,8 +51,9 @@ TestResult.xml
 nunit-*.xml
 
 # Build Results of an ATL Project
-[Dd]ebugPS/
-[Rr]eleasePS/
+[Dd]ebug/
+[Rr]elease/
+
 dlldata.c
 
 # Benchmark Results
@@ -92,6 +95,8 @@ StyleCopReport.xml
 *.pidb
 *.svclog
 *.scc
+*.tlog
+*.exe
 
 # Chutzpah Test files
 _Chutzpah*
