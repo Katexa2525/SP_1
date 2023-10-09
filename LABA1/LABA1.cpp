@@ -71,9 +71,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	return (int)msg.wParam;
 }
-
-
-
 //
 //  ФУНКЦИЯ: MyRegisterClass()
 //
@@ -191,7 +188,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   }
   case WM_CREATE:
     LoadBitmapFromFile();
-    nTimerID = SetTimer(hWnd, 1, 10, NULL);
+    nTimerID = SetTimer(hWnd, 1, 9, NULL);
     break;
 
   case WM_PAINT:
@@ -246,36 +243,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       }
     }
 
-    // Ограничьте скорость мячика, если она слишком большая
+    // Ограничиваем скорость мячика, если она слишком большая
     const double maxSpeed = 3.0;
     if (xVelocity > maxSpeed) xVelocity = maxSpeed;
     if (xVelocity < -maxSpeed) xVelocity = -maxSpeed;
     if (yVelocity > maxSpeed) yVelocity = maxSpeed;
     if (yVelocity < -maxSpeed) yVelocity = -maxSpeed;
-
-    // Запросите перерисовку окна
-    //InvalidateRect(hWnd, NULL, TRUE);
   }
   break;
 
   case WM_LBUTTONUP:
   {
-    // Сбросьте скорость мячика при отпускании левой кнопки мыши
+    // Сбрасываем скорость мячика при отпускании левой кнопки мыши
     xVelocity = 0.0;
     yVelocity = 0.0;
   }
   break;
 
-  // В функции WM_TIMER, измените позицию мячика на основе скорости
+  // В функции WM_TIMER, изменяем позицию мячика на основе скорости
   case WM_TIMER:
-  {// Обновите позицию мячика на основе скорости
+  {
     xPos += (int)xVelocity;
     yPos += (int)yVelocity;
 
-    // Получите размеры клиентской области окна
     GetClientRect(hWnd, &clientRect);
 
-    // Проверьте столкновение мячика с границами окна и скорректируйте позицию при необходимости
     if (xPos < 0)
     {
       xPos = 0;
@@ -297,7 +289,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       yVelocity = -yVelocity * acceleration;
     }
 
-    // Запросите перерисовку окна
     InvalidateRect(hWnd, NULL, TRUE);
 
   }
