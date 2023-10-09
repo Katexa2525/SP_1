@@ -139,6 +139,7 @@
     <ResourceCompile Include="LABA1.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\..\..\..\..\..\Pictures\ball1.bmp" />
     <Image Include="LABA1.ico" />
     <Image Include="small.ico" />
   </ItemGroup>

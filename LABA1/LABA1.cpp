@@ -11,13 +11,22 @@ HINSTANCE hInst;                                // текущий экземпл
 WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
 WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
 
-HBRUSH hBrush = CreateSolidBrush(RGB(255, 0, 0)); // Красная кисть для рисования овала
+
+HBITMAP hBitmap = NULL;
+BITMAP Bitmap;
+//HBRUSH hBrush = CreateSolidBrush(RGB(255, 0, 0)); // Красная кисть для рисования овала
 int xPos = 100;                                 // Начальная позиция X овала
 int yPos = 100;                                 // Начальная позиция Y овала
 bool isShiftPressed = false;                    // Флаг нажатия клавиши Shift
-const int ballSize = 20;
+
+
+UINT_PTR nTimerID;
+double xVelocity = 0.0;
+double yVelocity = 0.0;
+const double acceleration = 1.0;
 
 RECT clientRect; // Клиентская область окна
+SIZE spriteSize;  // Размеры спрайта
 
 // Отправить объявления функций, включенных в этот модуль кода:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -62,9 +71,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	return (int)msg.wParam;
 }
-
-
-
 //
 //  ФУНКЦИЯ: MyRegisterClass()
 //
@@ -112,13 +118,23 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	{
 		return FALSE;
 	}
-
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
 
 	return TRUE;
 }
 
+void LoadBitmapFromFile()
+{
+  hBitmap = (HBITMAP)LoadImage(NULL, L"ball1.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmap)
+  {
+    BITMAP bm;
+    GetObject(hBitmap, sizeof(BITMAP), &bm);
+    spriteSize.cx = bm.bmWidth;
+    spriteSize.cy = bm.bmHeight;
+  }
+}
 //
 //  ФУНКЦИЯ: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -155,81 +171,126 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     RECT clientRect;
     GetClientRect(hWnd, &clientRect);
 
-    // Проверяем размеры окна и, если они меньше размеров мячика, устанавливаем минимальные размеры окна.
-    if (clientRect.right - clientRect.left < ballSize || clientRect.bottom - clientRect.top < ballSize)
+    // Устанавливаем минимальные размеры окна равными размерам спрайта
+    if (clientRect.right - clientRect.left < spriteSize.cx || clientRect.bottom - clientRect.top < spriteSize.cy)
     {
-      // Устанавливаем минимальные размеры окна равными размерам мячика
-      SetWindowPos(hWnd, NULL, 0, 0, ballSize, ballSize, SWP_NOMOVE | SWP_NOZORDER);
+      SetWindowPos(hWnd, NULL, 0, 0, spriteSize.cx, spriteSize.cy, SWP_NOMOVE | SWP_NOZORDER);
     }
 
     break;
   }
+  case WM_GETMINMAXINFO:
+  {
+    MINMAXINFO* lpMMI = (MINMAXINFO*)lParam;
+    lpMMI->ptMinTrackSize.x = spriteSize.cx;  // Минимальная ширина окна
+    lpMMI->ptMinTrackSize.y = spriteSize.cy; // Минимальная высота окна
+    return 0;
+  }
+  case WM_CREATE:
+    LoadBitmapFromFile();
+    nTimerID = SetTimer(hWnd, 1, 9, NULL);
+    break;
+
   case WM_PAINT:
   {
     PAINTSTRUCT ps;
     HDC hdc = BeginPaint(hWnd, &ps);
-    // Рисуем овал
-    SelectObject(hdc, hBrush);
-    Ellipse(hdc, xPos - 20, yPos - 20, xPos + 20, yPos + 20);
+
+    if (hBitmap)
+    {
+      HDC hdcMem = CreateCompatibleDC(hdc);
+      SelectObject(hdcMem, hBitmap);
+      // Рисуем спрайт с учетом его размеров
+      BitBlt(hdc, xPos, yPos, spriteSize.cx, spriteSize.cy, hdcMem, 0, 0, SRCCOPY);
+
+      DeleteDC(hdcMem);
+    }
+
     EndPaint(hWnd, &ps);
   }
   break;
   case WM_DESTROY:
-    DeleteObject(hBrush); // Освобождаем кисть
+    //DeleteObject(hBrush); // Освобождаем кисть
+    KillTimer(hWnd, nTimerID);
     PostQuitMessage(0);
     break;
 
   case WM_MOUSEWHEEL:
   {
     int delta = GET_WHEEL_DELTA_WPARAM(wParam);
-    int radius = 20; // Радиус круга
-    GetClientRect(hWnd, &clientRect); // Получаем клиентскую область окна
+    GetClientRect(hWnd, &clientRect);
+
     if (delta > 0)
     {
-      // При прокрутке вверх двигаем овал вверх, или влево если Shift нажат
       if (isShiftPressed)
       {
-        xPos -= 10;
+        xVelocity -= 1.0;
       }
       else
       {
-        yPos -= 10;
+        yVelocity -= 1.0;
       }
     }
     else
     {
-      // При прокрутке вниз двигаем овал вниз, или вправо если Shift нажат
       if (isShiftPressed)
       {
-        xPos += 10;
+        xVelocity += 1.0;
       }
       else
       {
-        yPos += 10;
+        yVelocity += 1.0;
       }
     }
 
-    // Проверяем, чтобы круг не выходил за границы окна
-    if (xPos - radius < 0)
+    // Ограничиваем скорость мячика, если она слишком большая
+    const double maxSpeed = 3.0;
+    if (xVelocity > maxSpeed) xVelocity = maxSpeed;
+    if (xVelocity < -maxSpeed) xVelocity = -maxSpeed;
+    if (yVelocity > maxSpeed) yVelocity = maxSpeed;
+    if (yVelocity < -maxSpeed) yVelocity = -maxSpeed;
+  }
+  break;
+
+  case WM_LBUTTONUP:
+  {
+    // Сбрасываем скорость мячика при отпускании левой кнопки мыши
+    xVelocity = 0.0;
+    yVelocity = 0.0;
+  }
+  break;
+
+  // В функции WM_TIMER, изменяем позицию мячика на основе скорости
+  case WM_TIMER:
+  {
+    xPos += (int)xVelocity;
+    yPos += (int)yVelocity;
+
+    GetClientRect(hWnd, &clientRect);
+
+    if (xPos < 0)
     {
-      xPos = radius;
+      xPos = 0;
+      xVelocity = -xVelocity * acceleration;
     }
-    else if (xPos + radius > clientRect.right)
+    if (xPos + spriteSize.cx > clientRect.right)
     {
-      xPos = clientRect.right - radius;
+      xPos = clientRect.right - spriteSize.cx;
+      xVelocity = -xVelocity * acceleration;
+    }
+    if (yPos < 0)
+    {
+      yPos = 0;
+      yVelocity = -yVelocity * acceleration;
+    }
+    if (yPos + spriteSize.cy > clientRect.bottom)
+    {
+      yPos = clientRect.bottom - spriteSize.cy;
+      yVelocity = -yVelocity * acceleration;
     }
 
-    if (yPos - radius < 0)
-    {
-      yPos = radius;
-    }
-    else if (yPos + radius > clientRect.bottom)
-    {
-      yPos = clientRect.bottom - radius;
-    }
-
-    // Запрашиваем перерисовку окна
     InvalidateRect(hWnd, NULL, TRUE);
+
   }
   break;
   case WM_KEYDOWN:

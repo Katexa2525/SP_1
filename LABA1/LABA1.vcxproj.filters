@@ -45,5 +45,8 @@
     <Image Include="LABA1.ico">
       <Filter>Файлы ресурсов</Filter>
     </Image>
+    <Image Include="..\..\..\..\..\..\Pictures\ball1.bmp">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
   </ItemGroup>
 </Project>
