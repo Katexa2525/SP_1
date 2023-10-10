@@ -28,7 +28,6 @@ const double acceleration = 1.0;
 RECT clientRect; // Клиентская область окна
 SIZE spriteSize;  // Размеры спрайта
 
-// Отправить объявления функций, включенных в этот модуль кода:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -71,11 +70,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	return (int)msg.wParam;
 }
-//
-//  ФУНКЦИЯ: MyRegisterClass()
-//
-//  ЦЕЛЬ: Регистрирует класс окна.
-//
+
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
 	WNDCLASSEXW wcex;
@@ -97,16 +92,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	return RegisterClassExW(&wcex);
 }
 
-//
-//   ФУНКЦИЯ: InitInstance(HINSTANCE, int)
-//
-//   ЦЕЛЬ: Сохраняет маркер экземпляра и создает главное окно
-//
-//   КОММЕНТАРИИ:
-//
-//        В этой функции маркер экземпляра сохраняется в глобальной переменной, а также
-//        создается и выводится главное окно программы.
-//
+
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	hInst = hInstance; // Сохранить маркер экземпляра в глобальной переменной
@@ -135,16 +121,7 @@ void LoadBitmapFromFile()
     spriteSize.cy = bm.bmHeight;
   }
 }
-//
-//  ФУНКЦИЯ: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  ЦЕЛЬ: Обрабатывает сообщения в главном окне.
-//
-//  WM_COMMAND  - обработать меню приложения
-//  WM_PAINT    - Отрисовка главного окна
-//  WM_DESTROY  - отправить сообщение о выходе и вернуться
-//
-//
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
   switch (message)
@@ -183,7 +160,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   {
     MINMAXINFO* lpMMI = (MINMAXINFO*)lParam;
     lpMMI->ptMinTrackSize.x = spriteSize.cx;  // Минимальная ширина окна
-    lpMMI->ptMinTrackSize.y = spriteSize.cy; // Минимальная высота окна
+    lpMMI->ptMinTrackSize.y = spriteSize.cy+70; // Минимальная высота окна
     return 0;
   }
   case WM_CREATE:
@@ -244,7 +221,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     // Ограничиваем скорость мячика, если она слишком большая
-    const double maxSpeed = 3.0;
+    const double maxSpeed = 5.0;
     if (xVelocity > maxSpeed) xVelocity = maxSpeed;
     if (xVelocity < -maxSpeed) xVelocity = -maxSpeed;
     if (yVelocity > maxSpeed) yVelocity = maxSpeed;
@@ -252,13 +229,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   }
   break;
 
-  case WM_LBUTTONUP:
-  {
-    // Сбрасываем скорость мячика при отпускании левой кнопки мыши
-    xVelocity = 0.0;
-    yVelocity = 0.0;
-  }
-  break;
+  //case WM_LBUTTONUP:
+  //{
+  //  // Сбрасываем скорость мячика при отпускании левой кнопки мыши
+  //  xVelocity = 0.0;
+  //  yVelocity = 0.0;
+  //}
+  //break;
 
   // В функции WM_TIMER, изменяем позицию мячика на основе скорости
   case WM_TIMER:
@@ -268,43 +245,68 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     GetClientRect(hWnd, &clientRect);
 
-    if (xPos < 0)
+    if (xPos < 0) // левая граница
     {
       xPos = 0;
       xVelocity = -xVelocity * acceleration;
     }
-    if (xPos + spriteSize.cx > clientRect.right)
+    if (xPos + spriteSize.cx > clientRect.right) // правая граница
     {
       xPos = clientRect.right - spriteSize.cx;
       xVelocity = -xVelocity * acceleration;
     }
-    if (yPos < 0)
+    if (yPos < 0)  // верхняя граница
     {
       yPos = 0;
       yVelocity = -yVelocity * acceleration;
     }
-    if (yPos + spriteSize.cy > clientRect.bottom)
+    if (yPos + spriteSize.cy > clientRect.bottom) // нижняя граница
     {
       yPos = clientRect.bottom - spriteSize.cy;
       yVelocity = -yVelocity * acceleration;
     }
-
+    const double damping = 0.98;
+    xVelocity *= damping;
+    yVelocity *= damping;
     InvalidateRect(hWnd, NULL, TRUE);
-
   }
   break;
   case WM_KEYDOWN:
-    if (wParam == VK_SHIFT)
+    switch (wParam)
     {
-      isShiftPressed = true; // Устанавливаем флаг нажатия Shift
+    case VK_SHIFT:
+        isShiftPressed = true; // Устанавливаем флаг нажатия Shif
+      break;
+    case VK_LEFT:
+      xVelocity -= 1.0;
+      break;
+    case VK_RIGHT:
+      xVelocity += 1.0;
+      break;
+    case VK_UP:
+      yVelocity -= 1.0;
+      break;
+    case VK_DOWN:
+      yVelocity += 1.0;
+      break;
     }
     break;
   case WM_KEYUP:
-    if (wParam == VK_SHIFT)
+    switch (wParam)
     {
-      isShiftPressed = false; // Сбрасываем флаг нажатия Shift
+    case VK_LEFT:
+    case VK_RIGHT:
+      xVelocity = 0.0;
+      break;
+    case VK_UP:
+    case VK_DOWN:
+      yVelocity = 0.0;
+      break;
     }
+    case VK_SHIFT:
+    isShiftPressed = false; // Сбрасываем флаг нажатия Shif
     break;
+
   default:
     return DefWindowProc(hWnd, message, wParam, lParam);
   }
